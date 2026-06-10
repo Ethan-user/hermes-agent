@@ -5,11 +5,9 @@ services:
     plan: free
     disk:
       name: hermes-data
-      mountPath: /opt/data # MUST match Dockerfile's HERMES_HOME
+      mountPath: /opt/data
       size: 1GB
     envVars:
       - key: OPENROUTER_API_KEY
-        # Set this in Render Dashboard -> Service -> Environment -> Add Variable
       - key: TELEGRAM_BOT_TOKEN
-        # Set this in Render Dashboard -> Service -> Environment -> Add Variable
-    command: ["hermes", "gateway", "run"] # KEEPS HERMES IN FOREGROUND (critical for s6)
+    command: ["hermes", "gateway", "run"]
