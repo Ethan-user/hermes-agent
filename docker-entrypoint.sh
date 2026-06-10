@@ -43,24 +43,24 @@ if [[ -z "${OPENROUTER_API_KEY:-}" || -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
     exit 1
 fi
 
-# Try non-interactive auth add, but don't fail if it's already added
-if hermes auth list | grep -q openrouter; then
-    echo "✅ OpenRouter auth already exists"
-else
-    echo "Adding OpenRouter auth..."
-    printf "%s\n" "$OPENROUTER_API_KEY" | hermes auth add openrouter || echo "⚠️  OpenRouter auth add failed, might already exist"
-fi
+# Add OpenRouter API key to config (Hermes uses OPENROUTER_API_KEY env var directly)
+echo "$OPENROUTER_API_KEY" > "$HERMES_HOME/.env.openrouter"
+echo "OPENROUTER_API_KEY=$OPENROUTER_API_KEY" >> "$HERMES_HOME/.env"
 
-if hermes auth list | grep -q telegram; then
-    echo "✅ Telegram auth already exists"
-else
-    echo "Adding Telegram auth..."
-    printf "%s\n" "$TELEGRAM_BOT_TOKEN" | hermes auth add telegram || echo "⚠️  Telegram auth add failed, might already exist"
-fi
+# Add Telegram bot token to config (Hermes uses TELEGRAM_BOT_TOKEN env var directly)
+echo "$TELEGRAM_BOT_TOKEN" > "$HERMES_HOME/.env.telegram"
+echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN" >> "$HERMES_HOME/.env"
 
-# Install gateway
-echo "Installing gateway..."
-hermes gateway install || echo "⚠️  Gateway install failed, might already be installed"
+# Set Telegram allowed users (replace with your Telegram user ID)
+# You can find your user ID by sending /id to @userinfobot in Telegram
+TELEGRAM_ALLOWED_USERS="${TELEGRAM_ALLOWED_USERS:-}"
+if [[ -n "$TELEGRAM_ALLOWED_USERS" ]]; then
+    echo "Setting Telegram allowed users: $TELEGRAM_ALLOWED_USERS"
+    hermes config set gateway.platforms.telegram.allowed_users "$TELEGRAM_ALLOWED_USERS"
+else
+    echo "⚠️  No TELEGRAM_ALLOWED_USERS set - you should set this env var in Render"
+    echo "    Find your Telegram user ID with @userinfobot and set TELEGRAM_ALLOWED_USERS=your_id"
+fi
 
 # Mark that we've run
 touch "$LOCK_FILE"
