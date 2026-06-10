@@ -1,0 +1,13 @@
+# ---- 1. Start from the official Hermes image (uses uv, python 3.12) ----
+FROM ghcr.io/nousresearch/hermes-agent:latest AS base
+
+# ---- 2. Set the home directory (matches the official image) ----
+ENV HERMES_HOME=/opt/data
+WORKDIR $HERMES_HOME
+
+# ---- 3. Copy an entrypoint script that does the one‑time setup ----
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# ---- 4. Use the script as the container’s entrypoint ----
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
