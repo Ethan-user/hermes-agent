@@ -40,16 +40,12 @@ hermes config set gateway.platforms.api_server.enabled true
 hermes config set gateway.platforms.api_server.host 0.0.0.0
 hermes config set gateway.platforms.api_server.port "$PORT"
 
-# Configure API server (generate a key if not provided)
-API_SERVER_KEY="${API_SERVER_KEY:-}"
-if [[ -z "$API_SERVER_KEY" ]]; then
-    echo "Generating API server key..."
-    API_SERVER_KEY=$(openssl rand -hex 32)
-    echo "API_SERVER_KEY=$API_SERVER_KEY" >> "$HERMES_HOME/.env"
-else
-    echo "Using provided API server key"
-fi
+# Generate API server key (REQUIRED - Hermes won't start without it)
+echo "Generating API server key..."
+API_SERVER_KEY=$(openssl rand -hex 32)
+echo "API_SERVER_KEY=$API_SERVER_KEY" >> "$HERMES_HOME/.env"
 hermes config set gateway.platforms.api_server.key "$API_SERVER_KEY"
+echo "✅ API Server Key generated: $API_SERVER_KEY"
 
 # Add auth from env vars
 echo "Adding authentication..."
@@ -75,6 +71,11 @@ else
     echo "⚠️  No TELEGRAM_ALLOWED_USERS set - you should set this env var in Render"
     echo "    Find your Telegram user ID with @userinfobot and set TELEGRAM_ALLOWED_USERS=your_id"
 fi
+
+# Configure Telegram to avoid polling conflicts
+# Set a unique session name to prevent conflicts with other instances
+echo "Configuring Telegram session..."
+hermes config set gateway.platforms.telegram.session_name "render-$(hostname)-$(date +%s)"
 
 # Mark that we've run
 touch "$LOCK_FILE"

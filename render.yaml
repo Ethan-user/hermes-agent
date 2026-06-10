@@ -20,8 +20,9 @@ services:
         # Your Telegram user ID (get with @userinfobot) - required for security
         # Example: 123456789
       - key: API_SERVER_KEY
-        # Optional: Custom API server key (if not set, one will be generated automatically)
-        # Example: your-32-character-hex-key-here
+        # Optional: Custom API server key (if not set, one will be auto-generated)
+        # Must be 32-character hex string if provided
+        # Example: a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0
     # ---- Port is automatically managed by Render via PORT env var ----
     # The entrypoint script uses $PORT (defaults to 10000) for the API server
     # ---- No custom command needed – the Dockerfile’s ENTRYPOINT runs everything ----
