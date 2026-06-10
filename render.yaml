@@ -1,10 +1,10 @@
-   services:
-     - type: web
-       name: hermes-agent
-       env: docker
-       plan: free
-       disk:
-         name: hermes-data
-         mountPath: /data/hermes
-         size: 1GB
-   
+services:
+  - type: web
+    name: hermes-agent
+    env: docker
+    plan: free
+    disk:
+      name: hermes-data
+      mountPath: /opt/data  # 🔑 MUST MATCH DOCKERFILE'S HERMES_HOME
+      size: 1GB
+    command: ["hermes", "gateway", "start"]  # 🔑 OVERRIDES DEFAULT CMD TO START GATEWAY
