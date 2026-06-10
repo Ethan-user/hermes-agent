@@ -10,12 +10,14 @@ LOCK_FILE="$HERMES_HOME/.entrypoint_ran"
 # Function to start a simple port binder
 start_port_binder() {
     echo "Starting port binder on 0.0.0.0:$PORT"
-    python3 -c "
+    # Create a simple Python script file
+    cat > "$HERMES_HOME/port_binder.py" << 'EOF'
 import http.server
 import socketserver
 import os
 import subprocess
 import sys
+import threading
 
 class HealthCheckHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -24,27 +26,28 @@ class HealthCheckHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b'Hermes Gateway is starting...')
 
-port = int(os.environ.get('PORT', '10000'))
-print(f'✅ Port {port} bound to 0.0.0.0 for Render health checks')
-
-# Start HTTP server in a thread
-from threading import Thread
-def run_server():
+def run_health_server():
+    port = int(os.environ.get('PORT', '10000'))
+    print(f'✅ Port {port} bound to 0.0.0.0 for Render health checks')
     with socketserver.TCPServer(("0.0.0.0", port), HealthCheckHandler) as httpd:
         httpd.serve_forever()
 
-server_thread = Thread(target=run_server, daemon=True)
-server_thread.start()
+# Start health server in background thread
+health_thread = threading.Thread(target=run_health_server, daemon=True)
+health_thread.start()
 
 print('✅ Port binder running, starting Hermes gateway...')
-# Now start the actual Hermes gateway
-sys.argv = ['hermes', 'gateway', 'run']
+# Start the actual Hermes gateway
 try:
-    subprocess.run(['hermes', 'gateway', 'run'], check=True)
-except subprocess.CalledProcessError as e:
-    print(f'❌ Hermes gateway exited with error: {e}')
-    sys.exit(1)
-" 
+    result = subprocess.run(['hermes', 'gateway', 'run'])
+    sys.exit(result.returncode)
+except KeyboardInterrupt:
+    print('❌ Gateway stopped')
+    sys.exit(0)
+EOF
+    
+    # Run the Python script
+    python3 "$HERMES_HOME/port_binder.py"
 }
 
 # First run - do setup and start everything
@@ -66,7 +69,7 @@ if [[ ! -f "$LOCK_FILE" ]]; then
     # Set model
     echo "Setting model provider..."
     hermes config set model.provider openrouter
-    hermes config set model.default google/gemma-7b-it:free
+    hermes config set model.default nvidia/nemotron-3-super-120b-a12b:free
     
     # Enable platforms
     echo "Enabling platforms..."
