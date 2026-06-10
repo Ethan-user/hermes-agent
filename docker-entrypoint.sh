@@ -7,10 +7,38 @@ PORT="${PORT:-10000}"
 # Prevent multiple executions
 LOCK_FILE="$HERMES_HOME/.entrypoint_ran"
 
+# Function to check if commands are available
+check_commands() {
+    echo "Checking required commands..."
+    
+    # Check for python3
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "❌ python3 not found - trying python..."
+        if ! command -v python >/dev/null 2>&1; then
+            echo "❌ Neither python3 nor python found!" >&2
+            exit 127
+        fi
+        PYTHON_CMD="python"
+    else
+        PYTHON_CMD="python3"
+    fi
+    echo "✅ Using $PYTHON_CMD"
+    
+    # Check for hermes
+    if ! command -v hermes >/dev/null 2>&1; then
+        echo "❌ hermes command not found" >&2
+        echo "PATH: $PATH" >&2
+        ls -la /usr/local/bin/ >&2
+        exit 127
+    fi
+    echo "✅ hermes command found"
+}
+
 # Function to start a simple port binder
 start_port_binder() {
     echo "Starting port binder on 0.0.0.0:$PORT"
-    # Create a simple Python script file
+    
+    # Create port binder script
     cat > "$HERMES_HOME/port_binder.py" << 'EOF'
 import http.server
 import socketserver
@@ -18,6 +46,7 @@ import os
 import subprocess
 import sys
 import threading
+import time
 
 class HealthCheckHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -25,10 +54,14 @@ class HealthCheckHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
         self.wfile.write(b'Hermes Gateway is starting...')
+    
+    def log_message(self, format, *args):
+        # Suppress default logging
+        pass
 
 def run_health_server():
     port = int(os.environ.get('PORT', '10000'))
-    print(f'✅ Port {port} bound to 0.0.0.0 for Render health checks')
+    print(f'✅ Port {port} bound to 0.0.0.0 for Render health checks', flush=True)
     with socketserver.TCPServer(("0.0.0.0", port), HealthCheckHandler) as httpd:
         httpd.serve_forever()
 
@@ -36,37 +69,41 @@ def run_health_server():
 health_thread = threading.Thread(target=run_health_server, daemon=True)
 health_thread.start()
 
-print('✅ Port binder running, starting Hermes gateway...')
+# Give health server a moment to start
+time.sleep(1)
+
+print('✅ Port binder running, starting Hermes gateway...', flush=True)
+
 # Start the actual Hermes gateway
 try:
     result = subprocess.run(['hermes', 'gateway', 'run'])
     sys.exit(result.returncode)
-except KeyboardInterrupt:
-    print('❌ Gateway stopped')
-    sys.exit(0)
+except Exception as e:
+    print(f'❌ Hermes gateway exited with error: {e}', flush=True)
+    sys.exit(1)
 EOF
-    
-    # Run the Python script
-    python3 "$HERMES_HOME/port_binder.py"
+
+    # Run the Python script with proper error handling
+    if ! $PYTHON_CMD "$HERMES_HOME/port_binder.py"; then
+        echo "❌ Port binder failed to start" >&2
+        exit 1
+    fi
 }
 
 # First run - do setup and start everything
 if [[ ! -f "$LOCK_FILE" ]]; then
     echo ">>>> ENTRYPOINT STARTING (First Run) <<<<"
     
+    # Check commands first
+    check_commands
+    
     # Make sure we're in the right directory
     mkdir -p "$HERMES_HOME"
     cd "$HERMES_HOME"
     
-    # Verify hermes command is available
-    if ! command -v hermes >/dev/null 2>&1; then
-        echo "❌ hermes command not found in PATH" >&2
-        exit 127
-    fi
-    
     echo "✅ hermes command found: $(command -v hermes)"
     
-    # Set model
+    # Set model (using Nemotron-3-Super 120B - more powerful and still free)
     echo "Setting model provider..."
     hermes config set model.provider openrouter
     hermes config set model.default nvidia/nemotron-3-super-120b-a12b:free
@@ -115,4 +152,5 @@ fi
 
 # Start the port binder which will also start Hermes
 echo "Starting combined port binder and Hermes gateway..."
+check_commands
 start_port_binder
