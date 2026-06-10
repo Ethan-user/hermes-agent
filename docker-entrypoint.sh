@@ -103,10 +103,10 @@ if [[ ! -f "$LOCK_FILE" ]]; then
     
     echo "✅ hermes command found: $(command -v hermes)"
     
-    # Set model (using Nemotron-3-Super 120B - more powerful and still free)
+    # Set model (using Mistral Small - cost-effective for experiment tier)
     echo "Setting model provider..."
     hermes config set model.provider openrouter
-    hermes config set model.default nvidia/nemotron-3-super-120b-a12b:free
+    hermes config set model.default mistralai/mistral-small-latest
     
     # Enable platforms
     echo "Enabling platforms..."

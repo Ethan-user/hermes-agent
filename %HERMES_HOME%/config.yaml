@@ -1,0 +1,43 @@
+# Hermes Agent Configuration
+# Experiment tier setup with Mistral Small via OpenRouter
+
+model:
+  provider: openrouter
+  model: mistralai/mistral-small-latest
+  base_url: "https://openrouter.ai/api/v1"
+
+# Auxiliary models configuration
+auxiliary:
+  vision:
+    provider: auto
+    model: ""
+  web_extract:
+    provider: auto
+    model: ""
+  compression:
+    provider: auto
+    model: ""
+
+# Toolsets - keep default for now
+toolsets: ["hermes-cli"]
+
+# Agent settings
+agent:
+  max_turns: 90
+  gateway_timeout: 1800
+  api_max_retries: 3
+
+# Terminal settings
+terminal:
+  cwd: "%USERPROFILE%"
+  shell: "cmd.exe"
+
+# Display settings
+display:
+  skin: "default"
+  tool_progress_command: true
+
+# Logging
+logging:
+  level: "INFO"
+  file: "%HERMES_HOME%/logs/agent.log"
