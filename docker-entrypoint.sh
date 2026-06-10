@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Use Render's PORT environment variable (defaults to 10000 if not set)
+PORT="${PORT:-10000}"
+
 # Prevent multiple executions
 LOCK_FILE="$HERMES_HOME/.entrypoint_ran"
 if [[ -f "$LOCK_FILE" ]]; then
@@ -9,6 +12,7 @@ if [[ -f "$LOCK_FILE" ]]; then
 fi
 
 echo ">>>> ENTRYPOINT STARTING <<<<"
+echo "Using PORT: $PORT"
 
 # Make sure we're in the right directory
 mkdir -p "$HERMES_HOME"
@@ -34,7 +38,18 @@ echo "Enabling platforms..."
 hermes config set gateway.platforms.telegram.enabled true
 hermes config set gateway.platforms.api_server.enabled true
 hermes config set gateway.platforms.api_server.host 0.0.0.0
-hermes config set gateway.platforms.api_server.port 8080
+hermes config set gateway.platforms.api_server.port "$PORT"
+
+# Configure API server (generate a key if not provided)
+API_SERVER_KEY="${API_SERVER_KEY:-}"
+if [[ -z "$API_SERVER_KEY" ]]; then
+    echo "Generating API server key..."
+    API_SERVER_KEY=$(openssl rand -hex 32)
+    echo "API_SERVER_KEY=$API_SERVER_KEY" >> "$HERMES_HOME/.env"
+else
+    echo "Using provided API server key"
+fi
+hermes config set gateway.platforms.api_server.key "$API_SERVER_KEY"
 
 # Add auth from env vars
 echo "Adding authentication..."
@@ -52,7 +67,6 @@ echo "$TELEGRAM_BOT_TOKEN" > "$HERMES_HOME/.env.telegram"
 echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN" >> "$HERMES_HOME/.env"
 
 # Set Telegram allowed users (replace with your Telegram user ID)
-# You can find your user ID by sending /id to @userinfobot in Telegram
 TELEGRAM_ALLOWED_USERS="${TELEGRAM_ALLOWED_USERS:-}"
 if [[ -n "$TELEGRAM_ALLOWED_USERS" ]]; then
     echo "Setting Telegram allowed users: $TELEGRAM_ALLOWED_USERS"
@@ -65,6 +79,8 @@ fi
 # Mark that we've run
 touch "$LOCK_FILE"
 echo "✅ Setup complete"
+echo "✅ API Server Key: $API_SERVER_KEY (save this for API access)"
+echo "✅ Listening on 0.0.0.0:$PORT"
 
 # Start Hermes
 echo "Starting Hermes gateway..."

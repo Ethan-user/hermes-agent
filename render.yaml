@@ -19,6 +19,9 @@ services:
       - key: TELEGRAM_ALLOWED_USERS
         # Your Telegram user ID (get with @userinfobot) - required for security
         # Example: 123456789
-    # ---- Port configuration for Render ----
-    port: 8080
+      - key: API_SERVER_KEY
+        # Optional: Custom API server key (if not set, one will be generated automatically)
+        # Example: your-32-character-hex-key-here
+    # ---- Port is automatically managed by Render via PORT env var ----
+    # The entrypoint script uses $PORT (defaults to 10000) for the API server
     # ---- No custom command needed – the Dockerfile’s ENTRYPOINT runs everything ----
