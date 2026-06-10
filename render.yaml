@@ -1,0 +1,10 @@
+   services:
+     - type: web
+       name: hermes-agent
+       env: docker
+       plan: free
+       disk:
+         name: hermes-data
+         mountPath: /data/hermes
+         size: 1GB
+   
