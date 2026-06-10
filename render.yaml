@@ -5,6 +5,6 @@ services:
     plan: free
     disk:
       name: hermes-data
-      mountPath: /opt/data  # 🔑 MUST MATCH DOCKERFILE'S HERMES_HOME
+      mountPath: /opt/data  # MUST match Dockerfile's HERMES_HOME
       size: 1GB
-    command: ["hermes", "gateway", "start"]  # 🔑 OVERRIDES DEFAULT CMD TO START GATEWAY
+    command: ["hermes", "gateway", "run"]  # 🔑 KEY CHANGE: "run" not "start"
