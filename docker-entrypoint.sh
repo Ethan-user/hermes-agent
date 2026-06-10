@@ -1,44 +1,48 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
--------------------------------------------------
-1️⃣  Wait for HERMES_HOME to exist (Render mounts the disk here)
--------------------------------------------------
+echo ">>>> ENTRYPOINT STARTING <<<<"
+
+# Make sure we're in the right directory
 mkdir -p "$HERMES_HOME"
 cd "$HERMES_HOME"
 
--------------------------------------------------
-2️⃣  Set model (free OpenRouter model)
--------------------------------------------------
+# Verify hermes command is available
+if ! command -v hermes >/dev/null 2>&1; then
+    echo "❌ hermes command not found in PATH" >&2
+    echo "PATH: $PATH" >&2
+    ls -la /usr/local/bin/ >&2
+    exit 127
+fi
+
+echo "✅ hermes command found: $(command -v hermes)"
+
+# Set model
+echo "Setting model provider..."
 hermes config set model.provider openrouter
 hermes config set model.default google/gemma-7b-it:free
 
--------------------------------------------------
-3️⃣  Enable Telegram + API Server (API Server gives Render a port)
--------------------------------------------------
+# Enable platforms
+echo "Enabling platforms..."
 hermes config set gateway.platforms.telegram.enabled true
 hermes config set gateway.platforms.api_server.enabled true
 hermes config set gateway.platforms.api_server.host 0.0.0.0
 hermes config set gateway.platforms.api_server.port 8080
 
--------------------------------------------------
-4️⃣  Add auth from Render‑injected env vars (non‑interactive)
--------------------------------------------------
+# Add auth from env vars
+echo "Adding authentication..."
 if [[ -z "${OPENROUTER_API_KEY:-}" || -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
-  echo "❌  Missing OPENROUTER_API_KEY or TELEGRAM_BOT_TOKEN – set them in Render → Environment" >&2
-  exit 1
+    echo "❌ Missing OPENROUTER_API_KEY or TELEGRAM_BOT_TOKEN" >&2
+    exit 1
 fi
 
-# Non‑interactive auth add (works in Hermes v0.16.0)
 echo "$OPENROUTER_API_KEY" | hermes auth add openrouter >/dev/null 2>&1
-echo "$TELEGRAM_BOT_TOKEN" | hermes auth add telegram   >/dev/null 2>&1
+echo "$TELEGRAM_BOT_TOKEN" | hermes auth add telegram >/dev/null 2>&1
 
--------------------------------------------------
-5️⃣  Install the gateway (creates default config if missing)
--------------------------------------------------
+# Install gateway
+echo "Installing gateway..."
 hermes gateway install
 
--------------------------------------------------
-6️⃣  Finally start Hermes in the foreground (required for s6)
--------------------------------------------------
+# Start Hermes
+echo "Starting Hermes gateway..."
 exec hermes gateway run
